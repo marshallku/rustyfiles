@@ -32,7 +32,6 @@ async fn main() {
     let listener = TcpListener::bind(addr.as_str()).await.unwrap();
 
     info!("Server running at http://{}", addr);
-    error!("This package is deprecated, please use `ghcr.io/marshallku/rustyfiles:latest`: https://github.com/marshallku/rustyfiles");
 
     axum::serve(listener, app.into_make_service())
         .await
