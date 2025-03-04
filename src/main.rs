@@ -8,7 +8,7 @@ use controllers::app::app;
 use env::state::AppState;
 use tokio::net::TcpListener;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::{error, info, Level};
+use tracing::{info, Level};
 use utils::log::trace_layer_on_request;
 
 #[tokio::main]
