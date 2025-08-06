@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::utils::path::{get_original_path, get_resize_width_from_path};
+    use crate::utils::path::{get_original_path, get_resize_width_from_path, parse_path};
 
     #[test]
     fn test_get_resize_width_from_path() {
@@ -58,5 +58,32 @@ mod tests {
                 path[1]
             );
         }
+    }
+
+    #[test]
+    fn test_parse_path() {
+        assert_eq!(
+            parse_path("https://example.com/images/w100/path/to/image.jpg"),
+            (
+                Some("https://example.com".to_string()),
+                "/images/w100/path/to/image.jpg".to_string()
+            )
+        );
+        assert_eq!(
+            parse_path("https://example.com/"),
+            (Some("https://example.com".to_string()), "/".to_string())
+        );
+        assert_eq!(
+            parse_path("https://example.com"),
+            (Some("https://example.com".to_string()), "/".to_string())
+        );
+        assert_eq!(
+            parse_path("/images/w100/path/to/image.jpg"),
+            (None, "/images/w100/path/to/image.jpg".to_string())
+        );
+        assert_eq!(
+            parse_path("images/w100/path/to/image.jpg"),
+            (None, "/images/w100/path/to/image.jpg".to_string())
+        );
     }
 }
