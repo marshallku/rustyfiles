@@ -1,5 +1,5 @@
 use axum::{body::Body, extract::Request};
-use tracing::{error, info, Span};
+use tracing::{info, Span};
 
 pub fn trace_layer_on_request(request: &Request<Body>, _span: &Span) {
     let user_agent = request
@@ -26,5 +26,4 @@ pub fn trace_layer_on_request(request: &Request<Body>, _span: &Span) {
         "User-Agent: {:?} Referrer: {:?} IP: {:?}",
         user_agent, referer, ip_address
     );
-    error!("This package is deprecated, please use `ghcr.io/marshallku/rustyfiles:latest`: https://github.com/marshallku/rustyfiles");
 }
