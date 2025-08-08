@@ -40,7 +40,7 @@ The CDN now supports serving content from multiple hosts with intelligent path p
 ## Project Structure
 
 ```
-rustycdn/
+/
 ├── src/
 │   ├── controllers/     # Request handlers
 │   ├── services/        # Business logic
