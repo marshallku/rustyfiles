@@ -11,19 +11,55 @@
 ![Vulnerabilities](https://badge.marshallku.dev?metric=vulnerabilities&project=marshallku_marshallku-blog-cdn_7201a95a-ba17-439f-ac2d-60f1c9624f4c)
 ![Coverage](https://badge.marshallku.dev?metric=coverage&project=marshallku_marshallku-blog-cdn_7201a95a-ba17-439f-ac2d-60f1c9624f4c) -->
 
-This project is a custom CDN(Content Delivery Network) server built with Rust, designed to efficiently serve static files and images for my personal blog.
+A high-performance static file server built with Rust, designed to efficiently serve static files and images with advanced caching and optimization features.
 
 ## Features
 
-- Static File Serving: Serves CSS, JS, and other static files required by the blog.
-- Dynamic Image Resizing: On-demand image resizing to serve optimized images based on request parameters.
-- Caching Mechanism: Fetches static files from a specified origin and caches them locally to speed up subsequent requests.
+### Core Functionality
+
+-   **Static File Serving**: Serves CSS, JS, and other static files with intelligent caching
+-   **Dynamic Image Processing**: On-demand image resizing and WebP conversion
+-   **Multi-Host Support**: Serve content from multiple origin hosts with automatic host detection
+-   **Smart Caching**: Fetches files from origin servers and caches them locally for improved performance
+
+### Image Processing Capabilities
+
+-   **Automatic Resizing**: Resize images on-the-fly using width parameters (e.g., `w100`, `w300`)
+-   **WebP Conversion**: Convert images to WebP format for better compression
+-   **Format Detection**: Automatically detect and handle various image formats (PNG, JPG, JPEG, GIF, WebP, SVG)
+-   **Quality Optimization**: Serve optimized images based on request parameters
+
+### Host-Based Routing
+
+The CDN now supports serving content from multiple hosts with intelligent path parsing:
+
+-   **URL-based requests**: `https://example.com/images/path/to/image.jpg`
+-   **Absolute paths**: `/images/path/to/image.jpg`
+-   **Relative paths**: `images/path/to/image.jpg`
+
+## Project Structure
+
+```
+rustycdn/
+├── src/
+│   ├── controllers/     # Request handlers
+│   ├── services/        # Business logic
+│   ├── utils/           # Utility functions
+│   ├── env/             # Environment configuration
+│   └── constants/       # Application constants
+├── cdn_root/            # Root directory for cached files, customizable by environment variable `CDN_ROOT`
+│   ├── files/           # Cached static files
+│   └── images/          # Cached and processed images
+├── config/
+│   └── nginx.conf       # Nginx configuration example
+└── docker-compose.yml   # Docker deployment
+```
 
 ## Prerequisites
 
-- Rust
-- Docker
-- Basic understanding of Nginx
+-   Rust (latest stable)
+-   Docker (for containerized deployment)
+-   Basic understanding of Nginx (for production setup)
 
 ### Additional packages
 
@@ -31,38 +67,84 @@ This project is a custom CDN(Content Delivery Network) server built with Rust, d
 sudo apt install pkg-config libssl-dev
 ```
 
-In order to run the application using `cargo run`, the `reqwest` library requires the `pkg-config` and `libssl-dev` packages to be installed
+The `reqwest` library requires `pkg-config` and `libssl-dev` packages for HTTP client functionality.
 
 ## Usage
 
-After starting the server, it will listen for requests on the configured address. Static files and images can be accessed through the`/files/*path` and `/images/*path` endpoints, respectively.
+### Starting the Server
+
+```bash
+cargo run
+```
+
+The server will start listening on the configured address (default: `127.0.0.1:41890`).
+
+### Accessing Content
+
+#### Static Files
+
+-   **Endpoint**: `/files/*path`
+-   **Example**: `http://localhost:41890/files/css/style.css`
+
+#### Images
+
+-   **Endpoint**: `/images/*path`
+-   **Resize**: `http://localhost:41890/images/w100/photo.jpg` (resizes to 100px width)
+-   **WebP conversion**: `http://localhost:41890/images/photo.jpg.webp`
+
+#### Multi-Host Support
+
+-   **Full URL**: `http://localhost:41890/images/https://example.com/images/logo.png`
+-   **Host-based**: `http://localhost:41890/images/example.com/logo.png`
 
 ## Configuration
 
-- `BIND_ADDRESS`: Sets the IP address the server listens on (default: `127.0.0.1`).
-- `PORT`: Sets the port the server listens on (default: `41890`).
-- `HOST`: Sets the host server that original files exist (default: `http://localhost/`).
+Environment variables for customization:
 
-## Production Deployment with Nginx
+-   `BIND_ADDRESS`: Server bind address (default: `127.0.0.1`)
+-   `PORT`: Server port (default: `41890`)
+-   `HOST`: Default origin host (default: `http://localhost/`)
 
-For optimal performance and reliability in a production environment, it is recommended to deploy the Rust server behind Nginx. This setup enhances security, load balancing, and static asset serving capabilities. An example Nginx configuration tailored for use with this server can be found in `config/nginx.conf`. Refer to this example to configure Nginx as a reverse proxy for your Rust CDN server.
+## Production Deployment
 
-## Removing files with cronjob
+### Docker Deployment
 
-Automate the cleanup of unused files in your CDN's root directory by setting up cron jobs. These commands will search for and delete files based on their age and type, ensuring your directory remains clutter-free.
+```bash
+docker-compose up -d
+```
 
-### Setup
+### Nginx Reverse Proxy
 
-Paste the following lines into your crontab file to schedule the cleanup tasks. These commands are executed daily at 4:00 AM.
+For optimal performance in production, deploy behind Nginx using the provided configuration in `config/nginx.conf`.
 
-- The first job removes CSS and JavaScript files that haven't been accessed in over 5 days
+## File Management
 
-    ```shell
-    00 4 * * * /usr/bin/find /home/ubuntu/cdn/cdn_root -mindepth 2 -atime +5 -type f \( -o -iname \*.css -o -iname \*.js \) | xargs rm 1>/dev/null 2>/dev/null
-    ```
+### Automatic Cleanup
 
-- The second job targets image and video files (PNG, JPG, JPEG, GIF, WEBP, MP4, WEBM, SVG) as well as CSS and JavaScript files that haven't been accessed in over a year (365 days):
+Set up cron jobs to automatically clean up unused files:
 
-    ```shell
-    00 4 * * * /usr/bin/find /home/ubuntu/cdn/cdn_root -mindepth 2 -atime +365 -type f \( -iname \*.png -o -iname \*.jpg -o -iname \*.jpeg -o -iname \*.gif -o -iname \*.webp -o -iname \*.mp4 -o -iname \*.webm -o -iname \*.svg -o -iname \*.css -o -iname \*.js \) | xargs rm 1>/dev/null 2>/dev/null
-    ```
+```bash
+# Remove CSS/JS files older than 5 days
+00 4 * * * /usr/bin/find /path/to/cdn_root -mindepth 2 -atime +5 -type f \( -o -iname \*.css -o -iname \*.js \) | xargs rm 1>/dev/null 2>/dev/null
+
+# Remove media files older than 1 year
+00 4 * * * /usr/bin/find /path/to/cdn_root -mindepth 2 -atime +365 -type f \( -iname \*.png -o -iname \*.jpg -o -iname \*.jpeg -o -iname \*.gif -o -iname \*.webp -o -iname \*.mp4 -o -iname \*.webm -o -iname \*.svg -o -iname \*.css -o -iname \*.js \) | xargs rm 1>/dev/null 2>/dev/null
+```
+
+## Development
+
+### Running Tests
+
+```bash
+cargo test
+```
+
+### Building for Production
+
+```bash
+cargo build --release
+```
+
+## License
+
+This project is licensed under the MIT License.
