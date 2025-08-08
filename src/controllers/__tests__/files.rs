@@ -9,7 +9,10 @@ mod tests {
     };
     use tower::ServiceExt;
 
-    use crate::{constants::CDN_ROOT, controllers::app::app, env::state::AppState};
+    use crate::{
+        constants::CDN_ROOT, controllers::app::app, env::state::AppState,
+        utils::url::get_host_from_url,
+    };
 
     const URI: &str = "/files";
 
@@ -19,7 +22,7 @@ mod tests {
         let state = AppState::from_env();
         let file_path = "/images/hpp/ic_wahlberg_product_core_48.png8.png";
         let response = app
-            .with_state(state)
+            .with_state(state.clone())
             .oneshot(
                 Request::builder()
                     .uri(format!("{}{}", URI, file_path))
@@ -28,7 +31,13 @@ mod tests {
             )
             .await
             .unwrap();
-        let local_file_path = PathBuf::from(format!("{}{}{}", CDN_ROOT, URI, file_path));
+        let local_file_path = PathBuf::from(format!(
+            "{}{}/{}{}",
+            CDN_ROOT,
+            URI,
+            get_host_from_url(&state.host),
+            file_path
+        ));
 
         assert_eq!(response.status(), StatusCode::OK);
         assert!(local_file_path.exists());
@@ -65,7 +74,7 @@ mod tests {
         let state = AppState::from_env();
         let file_path = "/images/you-must-not-exist.png";
         let response = app
-            .with_state(state)
+            .with_state(state.clone())
             .oneshot(
                 Request::builder()
                     .uri(format!("{}{}", URI, file_path))
@@ -74,7 +83,13 @@ mod tests {
             )
             .await
             .unwrap();
-        let local_file_path = PathBuf::from(format!("{}{}{}", CDN_ROOT, URI, file_path));
+        let local_file_path = PathBuf::from(format!(
+            "{}{}/{}{}",
+            CDN_ROOT,
+            URI,
+            get_host_from_url(&state.host),
+            file_path
+        ));
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert!(!local_file_path.exists());
