@@ -1,4 +1,5 @@
 use axum::{http::StatusCode, response::Response};
+use ravif::{Encoder as AvifEncoder, Img};
 use std::{
     fs::{copy, write},
     path::PathBuf,
@@ -18,6 +19,34 @@ pub fn save_image_to_webp(image: &image::DynamicImage, path: &PathBuf) -> Result
 
     match write(path, &*webp_memory) {
         Ok(_) => Ok(()),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+pub fn save_image_to_avif(
+    image: &image::DynamicImage,
+    path: &PathBuf,
+    quality: Option<f32>,
+) -> Result<(), String> {
+    use rgb::FromSlice;
+
+    let rgba_image = image.to_rgba8();
+
+    let width = rgba_image.width() as usize;
+    let height = rgba_image.height() as usize;
+
+    let pixels = rgba_image.as_raw().as_rgba();
+    let img = Img::new(pixels, width, height);
+
+    let encoder = AvifEncoder::new()
+        .with_quality(quality.unwrap_or(80.0))
+        .with_speed(6);
+
+    match encoder.encode_rgba(img) {
+        Ok(avif_data) => match write(path, &avif_data.avif_file) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.to_string()),
+        },
         Err(e) => Err(e.to_string()),
     }
 }

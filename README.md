@@ -26,7 +26,8 @@ A high-performance static file server built with Rust, designed to efficiently s
 
 -   **Automatic Resizing**: Resize images on-the-fly using width parameters (e.g., `w100`, `w300`)
 -   **WebP Conversion**: Convert images to WebP format for better compression
--   **Format Detection**: Automatically detect and handle various image formats (PNG, JPG, JPEG, GIF, WebP, SVG)
+-   **AVIF Conversion**: Convert images to AVIF format for even better compression and quality
+-   **Format Detection**: Automatically detect and handle various image formats (PNG, JPG, JPEG, GIF, WebP, AVIF, SVG)
 -   **Quality Optimization**: Serve optimized images based on request parameters
 
 ### Host-Based Routing
@@ -91,6 +92,7 @@ The server will start listening on the configured address (default: `127.0.0.1:4
 -   **Endpoint**: `/images/*path`
 -   **Resize**: `http://localhost:41890/images/w100/photo.jpg` (resizes to 100px width)
 -   **WebP conversion**: `http://localhost:41890/images/photo.jpg.webp`
+-   **AVIF conversion**: `http://localhost:41890/images/photo.jpg.avif`
 
 #### Multi-Host Support
 
@@ -128,7 +130,7 @@ Set up cron jobs to automatically clean up unused files:
 00 4 * * * /usr/bin/find /path/to/cdn_root -mindepth 2 -atime +5 -type f \( -o -iname \*.css -o -iname \*.js \) | xargs rm 1>/dev/null 2>/dev/null
 
 # Remove media files older than 1 year
-00 4 * * * /usr/bin/find /path/to/cdn_root -mindepth 2 -atime +365 -type f \( -iname \*.png -o -iname \*.jpg -o -iname \*.jpeg -o -iname \*.gif -o -iname \*.webp -o -iname \*.mp4 -o -iname \*.webm -o -iname \*.svg -o -iname \*.css -o -iname \*.js \) | xargs rm 1>/dev/null 2>/dev/null
+00 4 * * * /usr/bin/find /path/to/cdn_root -mindepth 2 -atime +365 -type f \( -iname \*.png -o -iname \*.jpg -o -iname \*.jpeg -o -iname \*.gif -o -iname \*.webp -o -iname \*.avif -o -iname \*.mp4 -o -iname \*.webm -o -iname \*.svg -o -iname \*.css -o -iname \*.js \) | xargs rm 1>/dev/null 2>/dev/null
 ```
 
 ## Development

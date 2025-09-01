@@ -36,6 +36,7 @@ mod tests {
         let paths = vec![
             ["/path/to/file.w100.jpg", "/path/to/file.jpg"],
             ["/path/to/webp.w100.jpg.webp", "/path/to/webp.jpg"],
+            ["/path/to/avif.w100.jpg.avif", "/path/to/avif.jpg"],
             [
                 "/path/to/file.with.dot.w100.jpg",
                 "/path/to/file.with.dot.jpg",
@@ -44,11 +45,19 @@ mod tests {
                 "/path/to/webp.with.dot.w100.jpg.webp",
                 "/path/to/webp.with.dot.jpg",
             ],
+            [
+                "/path/to/avif.with.dot.w100.jpg.avif",
+                "/path/to/avif.with.dot.jpg",
+            ],
             ["/path/to/file.jpg", "/path/to/file.jpg"],
             ["/path/to/file.with.dot.jpg", "/path/to/file.with.dot.jpg"],
             [
                 "/path/to/webp.with.dot.jpg.webp",
                 "/path/to/webp.with.dot.jpg",
+            ],
+            [
+                "/path/to/avif.with.dot.jpg.avif",
+                "/path/to/avif.with.dot.jpg",
             ],
         ];
 

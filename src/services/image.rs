@@ -10,7 +10,7 @@ use crate::{
     utils::{
         fetch::fetch_and_cache,
         http::response_file,
-        img::{save_image_to_webp, save_resized_image},
+        img::{save_image_to_avif, save_image_to_webp, save_resized_image},
         path::{get_original_path, get_resize_width_from_path},
         url::get_host_from_url,
     },
@@ -32,6 +32,7 @@ pub async fn process_image_request(
 
     let resize_width = get_resize_width_from_path(path);
     let convert_to_webp = path.ends_with(".webp");
+    let convert_to_avif = path.ends_with(".avif");
     let original_path = get_original_path(path, resize_width.is_some());
     let original_file_path = PathBuf::from(format!(
         "{}/images/{}/{}",
@@ -46,28 +47,47 @@ pub async fn process_image_request(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    if resize_width.is_none() && !convert_to_webp {
+    if resize_width.is_none() && !convert_to_webp && !convert_to_avif {
         return Ok(response_file(&file_path).await);
     }
 
     let image = open_image(&original_file_path)?;
 
-    if !convert_to_webp {
-        return Ok(save_resized_image(image, resize_width, &original_file_path, &file_path).await);
+    if convert_to_avif {
+        let path_with_avif = format!("{}.avif", original_path);
+        let file_path_with_avif = PathBuf::from(format!(
+            "{}/images/{}/{}",
+            CDN_ROOT, pure_host, path_with_avif
+        ));
+
+        save_image_to_avif(&image, &file_path_with_avif, Some(80.0))
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let image_avif = open_image(&file_path_with_avif)?;
+
+        return Ok(
+            save_resized_image(image_avif, resize_width, &file_path_with_avif, &file_path).await,
+        );
     }
 
-    let path_with_webp = format!("{}.webp", original_path);
-    let file_path_with_webp = PathBuf::from(format!(
-        "{}/images/{}/{}",
-        CDN_ROOT, pure_host, path_with_webp
-    ));
+    if convert_to_webp {
+        let path_with_webp = format!("{}.webp", original_path);
+        let file_path_with_webp = PathBuf::from(format!(
+            "{}/images/{}/{}",
+            CDN_ROOT, pure_host, path_with_webp
+        ));
 
-    save_image_to_webp(&image, &file_path_with_webp)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        save_image_to_webp(&image, &file_path_with_webp)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let image_webp = open_image(&file_path_with_webp)?;
+        let image_webp = open_image(&file_path_with_webp)?;
 
-    Ok(save_resized_image(image_webp, resize_width, &file_path_with_webp, &file_path).await)
+        return Ok(
+            save_resized_image(image_webp, resize_width, &file_path_with_webp, &file_path).await,
+        );
+    }
+
+    Ok(save_resized_image(image, resize_width, &original_file_path, &file_path).await)
 }
 
 fn open_image(file_path: &PathBuf) -> Result<DynamicImage, StatusCode> {

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::utils::{
-        img::{save_image_to_webp, save_resized_image},
+        img::{save_image_to_avif, save_image_to_webp, save_resized_image},
         path,
     };
 
@@ -183,6 +183,71 @@ mod tests {
             StatusCode::OK,
             "Expected OK status for image response without width, but got {}",
             response.status()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_save_image_to_avif() {
+        const IMAGE_SIZE: u32 = 100;
+
+        let dir = tempdir().unwrap();
+        let output_path = dir.path().join("test_image.avif");
+
+        let image = DynamicImage::ImageRgb8(image::RgbImage::new(IMAGE_SIZE, IMAGE_SIZE));
+
+        match save_image_to_avif(&image, &output_path, None) {
+            Ok(_) => {}
+            Err(e) => {
+                panic!("Failed to save image as AVIF: {}", e);
+            }
+        };
+
+        assert!(
+            output_path.exists(),
+            "Output file does not exist after saving image as AVIF"
+        );
+
+        // Check that the file is not empty
+        let avif_data = read(&output_path).unwrap();
+        assert!(!avif_data.is_empty(), "AVIF file should not be empty");
+    }
+
+    #[tokio::test]
+    async fn test_save_image_to_avif_large_image() {
+        let image = DynamicImage::ImageRgb8(RgbImage::new(2000, 2000));
+        let dir = tempdir().unwrap();
+        let output_path = dir.path().join("large_image.avif");
+
+        match save_image_to_avif(&image, &output_path, None) {
+            Ok(_) => {}
+            Err(e) => {
+                panic!("Failed to save large image as AVIF: {}", e);
+            }
+        };
+
+        assert!(
+            output_path.exists(),
+            "Output file does not exist after saving large image as AVIF"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_save_image_to_avif_read_only_file_system() {
+        let image = DynamicImage::ImageRgb8(RgbImage::new(100, 100));
+        let dir = tempdir().unwrap();
+        let output_path = dir.path().join("read_only_image.avif");
+
+        set_permissions(dir.path(), std::fs::Permissions::from_mode(0o444)).unwrap();
+
+        let result = save_image_to_avif(&image, &output_path, None);
+
+        assert!(
+            result.is_err(),
+            "Expected error when saving to a read-only file system, but got success"
+        );
+        assert!(
+            !output_path.exists(),
+            "Output file should not exist after attempting to save to a read-only file system"
         );
     }
 

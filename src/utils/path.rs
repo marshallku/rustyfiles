@@ -16,7 +16,7 @@ pub fn get_original_path(path: &str, has_resize: bool) -> String {
 
     let mut parts: Vec<&str> = filename.split('.').collect();
 
-    if parts.last() == Some(&"webp") {
+    if parts.last() == Some(&"webp") || parts.last() == Some(&"avif") {
         parts.pop();
     }
 
