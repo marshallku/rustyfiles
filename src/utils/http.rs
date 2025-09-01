@@ -3,6 +3,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
 };
+use mime_guess;
 use std::path::PathBuf;
 use tokio_util::io::ReaderStream;
 
@@ -35,5 +36,10 @@ pub async fn response_file(file_path: &PathBuf) -> Response {
     let stream = ReaderStream::new(file);
     let body = Body::from_stream(stream);
 
-    (get_cache_header(YEAR_TO_SECONDS), body).into_response()
+    let mut headers = get_cache_header(YEAR_TO_SECONDS);
+
+    let mime_type = mime_guess::from_path(file_path).first_or_octet_stream();
+    headers.insert("Content-Type", mime_type.to_string().parse().unwrap());
+
+    (headers, body).into_response()
 }
