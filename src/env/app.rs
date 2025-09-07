@@ -5,6 +5,7 @@ pub struct Env {
     pub address: Cow<'static, str>,
     pub port: u16,
     pub host: Cow<'static, str>,
+    pub allowed_hosts: Vec<String>,
 }
 
 impl Env {
@@ -21,11 +22,20 @@ impl Env {
             Ok(host) => Cow::Owned(host),
             Err(_) => Cow::Owned("http://localhost/".to_string()),
         };
+        let allowed_hosts = match std::env::var("ALLOWED_HOSTS") {
+            Ok(hosts) if !hosts.is_empty() => hosts
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
+            _ => Vec::new(),
+        };
 
         Self {
             address,
             port,
             host,
+            allowed_hosts,
         }
     }
 }
