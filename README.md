@@ -106,6 +106,7 @@ Environment variables for customization:
 -   `BIND_ADDRESS`: Server bind address (default: `127.0.0.1`)
 -   `PORT`: Server port (default: `41890`)
 -   `HOST`: Default origin host (default: `http://localhost/`)
+-   `ALLOWED_HOSTS`: Comma-separated list of allowed hosts for whitelisting (e.g., `example.com,cdn.example.org`). If empty or not set, all hosts are allowed
 
 ## Production Deployment
 
