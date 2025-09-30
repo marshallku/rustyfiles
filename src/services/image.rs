@@ -23,7 +23,7 @@ pub async fn process_image_request(
 ) -> Result<Response, StatusCode> {
     let target_host = host.unwrap_or(state.host.clone());
     let pure_host = get_host_from_url(&target_host);
-    let file_path = PathBuf::from(format!("{}/images/{}/{}", CDN_ROOT, pure_host, path));
+    let file_path = PathBuf::from(format!("{}/images/{}/{}", CDN_ROOT, pure_host, path.trim_start_matches('/')));
 
     if file_path.exists() {
         error!("File exists but respond with Rust: {:?}", file_path);
@@ -36,7 +36,7 @@ pub async fn process_image_request(
     let original_path = get_original_path(path, resize_width.is_some());
     let original_file_path = PathBuf::from(format!(
         "{}/images/{}/{}",
-        CDN_ROOT, pure_host, original_path
+        CDN_ROOT, pure_host, original_path.trim_start_matches('/')
     ));
 
     if !original_file_path.exists()
@@ -57,7 +57,7 @@ pub async fn process_image_request(
         let path_with_avif = format!("{}.avif", original_path);
         let file_path_with_avif = PathBuf::from(format!(
             "{}/images/{}/{}",
-            CDN_ROOT, pure_host, path_with_avif
+            CDN_ROOT, pure_host, path_with_avif.trim_start_matches('/')
         ));
 
         save_image_to_avif(&image, &file_path_with_avif, Some(80.0))
@@ -74,7 +74,7 @@ pub async fn process_image_request(
         let path_with_webp = format!("{}.webp", original_path);
         let file_path_with_webp = PathBuf::from(format!(
             "{}/images/{}/{}",
-            CDN_ROOT, pure_host, path_with_webp
+            CDN_ROOT, pure_host, path_with_webp.trim_start_matches('/')
         ));
 
         save_image_to_webp(&image, &file_path_with_webp)

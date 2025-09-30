@@ -19,7 +19,7 @@ pub async fn process_file_request(
         "{}/files/{}/{}",
         CDN_ROOT,
         get_host_from_url(&target_host),
-        path
+        path.trim_start_matches('/')
     ));
 
     if file_path.exists() {
