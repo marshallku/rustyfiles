@@ -14,7 +14,7 @@ image = { version = "0.25.6", features = ["webp"] }
 log = "0.4.27"
 mime_guess = "2.0.5"
 ravif = { version = "0.11.12", default-features = false }
-reqwest = { version = "0.12.22", features = ["json"] }
+reqwest = { version = "0.12.22", features = ["json", "gzip"] }
 rgb = "0.8.37"
 tempfile = "3.20.0"
 tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread", "fs"] }
