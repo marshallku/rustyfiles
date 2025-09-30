@@ -7,7 +7,12 @@ pub async fn fetch_and_cache(
     file_path: &PathBuf,
     path: &str,
 ) -> Result<(), reqwest::Error> {
-    let url = format!("{}{}", host, path);
+    let encoded_path: String = path
+        .split('/')
+        .map(|segment| urlencoding::encode(segment).into_owned())
+        .collect::<Vec<_>>()
+        .join("/");
+    let url = format!("{}{}", host, encoded_path);
     let response = match Client::new().get(&url).send().await?.error_for_status() {
         Ok(response) => response.bytes().await?,
         Err(err) => {
