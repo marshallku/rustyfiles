@@ -79,7 +79,7 @@ pub async fn save_resized_image(
         .unwrap();
 
     if width.unwrap() < blur_threshold {
-        resized_image = resized_image.blur(blur_sigma);
+        resized_image = resized_image.fast_blur(blur_sigma);
     }
 
     match resized_image.save(target_path.clone()) {
