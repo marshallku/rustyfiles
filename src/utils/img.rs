@@ -67,7 +67,20 @@ pub async fn save_resized_image(
     }
 
     let resize_height = width.unwrap() * image.height() / image.width();
-    let resized_image = image.thumbnail(width.unwrap(), resize_height);
+    let mut resized_image = image.thumbnail(width.unwrap(), resize_height);
+
+    let blur_threshold = std::env::var("RESIZED_IMAGE_BLUR_THRESHOLD")
+        .unwrap_or("10".to_string())
+        .parse::<u32>()
+        .unwrap();
+    let blur_sigma = std::env::var("RESIZED_IMAGE_BLUR_SIGMA")
+        .unwrap_or("1.5".to_string())
+        .parse::<f32>()
+        .unwrap();
+
+    if width.unwrap() < blur_threshold {
+        resized_image = resized_image.blur(blur_sigma);
+    }
 
     match resized_image.save(target_path.clone()) {
         Ok(_) => response_file(target_path).await,
