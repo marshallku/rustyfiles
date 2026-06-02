@@ -1,37 +1,18 @@
-use axum::{http::StatusCode, response::Response};
+use image::{codecs::jpeg::JpegEncoder, DynamicImage, ImageFormat};
 use ravif::{Encoder as AvifEncoder, Img};
-use std::{
-    fs::{copy, write},
-    path::PathBuf,
-};
+use std::io::Cursor;
 use webp::Encoder;
 
-use super::http::{response_error, response_file};
-
-pub fn save_image_to_webp(image: &image::DynamicImage, path: &PathBuf) -> Result<(), String> {
-    let encoder = match Encoder::from_image(image) {
-        Ok(e) => e,
-        Err(e) => {
-            return Err(e.to_string());
-        }
-    };
+pub fn encode_image_to_webp(image: &DynamicImage) -> Result<Vec<u8>, String> {
+    let encoder = Encoder::from_image(image).map_err(|e| e.to_string())?;
     let webp_memory = encoder.encode(100f32);
-
-    match write(path, &*webp_memory) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(e.to_string()),
-    }
+    Ok(webp_memory.to_vec())
 }
 
-pub fn save_image_to_avif(
-    image: &image::DynamicImage,
-    path: &PathBuf,
-    quality: Option<f32>,
-) -> Result<(), String> {
+pub fn encode_image_to_avif(image: &DynamicImage, quality: Option<f32>) -> Result<Vec<u8>, String> {
     use rgb::FromSlice;
 
     let rgba_image = image.to_rgba8();
-
     let width = rgba_image.width() as usize;
     let height = rgba_image.height() as usize;
 
@@ -42,32 +23,15 @@ pub fn save_image_to_avif(
         .with_quality(quality.unwrap_or(80.0))
         .with_speed(6);
 
-    match encoder.encode_rgba(img) {
-        Ok(avif_data) => match write(path, &avif_data.avif_file) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(e.to_string()),
-        },
-        Err(e) => Err(e.to_string()),
-    }
+    encoder
+        .encode_rgba(img)
+        .map(|data| data.avif_file)
+        .map_err(|e| e.to_string())
 }
 
-pub async fn save_resized_image(
-    image: image::DynamicImage,
-    width: Option<u32>,
-    original_path: &PathBuf,
-    target_path: &PathBuf,
-) -> Response {
-    if width.is_none() {
-        return response_file(target_path).await;
-    }
-
-    if image.width() <= width.unwrap() {
-        copy(original_path, target_path).ok();
-        return response_file(target_path).await;
-    }
-
-    let resize_height = width.unwrap() * image.height() / image.width();
-    let mut resized_image = image.thumbnail(width.unwrap(), resize_height);
+pub fn resize_image(image: DynamicImage, width: u32) -> DynamicImage {
+    let resize_height = width * image.height() / image.width();
+    let mut resized = image.thumbnail(width, resize_height);
 
     let blur_threshold = std::env::var("RESIZED_IMAGE_BLUR_THRESHOLD")
         .unwrap_or("10".to_string())
@@ -78,12 +42,33 @@ pub async fn save_resized_image(
         .parse::<f32>()
         .unwrap();
 
-    if width.unwrap() < blur_threshold {
-        resized_image = resized_image.fast_blur(blur_sigma);
+    if width < blur_threshold {
+        resized = resized.fast_blur(blur_sigma);
     }
 
-    match resized_image.save(target_path.clone()) {
-        Ok(_) => response_file(target_path).await,
-        Err(_) => response_error(StatusCode::INTERNAL_SERVER_ERROR),
+    resized
+}
+
+pub fn encode_image(image: &DynamicImage, format: ImageFormat) -> Result<Vec<u8>, String> {
+    let mut buffer = Cursor::new(Vec::new());
+
+    match format {
+        ImageFormat::Jpeg => {
+            let encoder = JpegEncoder::new(&mut buffer);
+            image
+                .write_with_encoder(encoder)
+                .map_err(|e| e.to_string())?;
+        }
+        _ => {
+            image
+                .write_to(&mut buffer, format)
+                .map_err(|e| e.to_string())?;
+        }
     }
+
+    Ok(buffer.into_inner())
+}
+
+pub fn guess_image_format(path: &str) -> ImageFormat {
+    ImageFormat::from_path(path).unwrap_or(ImageFormat::Jpeg)
 }

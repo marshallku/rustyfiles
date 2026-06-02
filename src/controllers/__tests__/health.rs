@@ -14,7 +14,7 @@ mod tests {
     #[tokio::test]
     async fn should_be_healthy() {
         let app: Router<AppState> = Router::new().route("/", get(health::get));
-        let state = AppState::from_env();
+        let state = AppState::from_env().await;
         let response = app
             .with_state(state)
             .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())

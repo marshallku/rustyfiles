@@ -2,6 +2,7 @@ mod constants;
 mod controllers;
 mod env;
 mod services;
+mod storage;
 mod utils;
 
 use controllers::app::app;
@@ -18,7 +19,7 @@ async fn main() {
         .compact()
         .init();
 
-    let state = AppState::from_env();
+    let state = AppState::from_env().await;
     let addr = format!("{}:{}", state.address, state.port);
     let app = app()
         .layer(

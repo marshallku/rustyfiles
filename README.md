@@ -108,6 +108,22 @@ Environment variables for customization:
 -   `HOST`: Default origin host (default: `http://localhost/`)
 -   `ALLOWED_HOSTS`: Comma-separated list of allowed hosts for whitelisting (e.g., `example.com,cdn.example.org`). If empty or not set, all hosts are allowed
 
+### Storage backends
+
+Rusty Files can cache fetched files either on the local filesystem or in an S3-compatible object store (AWS S3, Cloudflare R2, MinIO, etc.). The backend is selected at startup via `STORAGE_BACKEND` and cannot be mixed — all reads and writes go through a single backend.
+
+-   `STORAGE_BACKEND`: `local` (default) or `s3` (alias: `r2`)
+
+When `STORAGE_BACKEND=s3`:
+
+-   `S3_ENDPOINT`: Custom endpoint URL. Leave empty for AWS S3. For Cloudflare R2 use `https://<account_id>.r2.cloudflarestorage.com`.
+-   `S3_REGION`: AWS region (e.g. `us-east-1`) or `auto` for R2.
+-   `S3_BUCKET`: Bucket name. Required.
+-   `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY`: Credentials. Required.
+-   `S3_FORCE_PATH_STYLE`: `true` (default) uses path-style URLs (`endpoint/bucket/key`), required for R2 and most S3-compatible services. Set to `false` to use AWS virtual-hosted style.
+
+Both S3 and R2 use the same protocol — AWS Signature V4 over HTTPS. R2 is drop-in S3-compatible, so only the endpoint and region differ.
+
 ## Production Deployment
 
 ### Docker Deployment

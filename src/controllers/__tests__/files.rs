@@ -19,7 +19,7 @@ mod tests {
     #[tokio::test]
     async fn test_response_file() {
         let app = app();
-        let state = AppState::from_env();
+        let state = AppState::from_env().await;
         let file_path = "/images/hpp/ic_wahlberg_product_core_48.png8.png";
         let response = app
             .with_state(state.clone())
@@ -46,7 +46,7 @@ mod tests {
     #[tokio::test]
     async fn test_response_file_with_host() {
         let app = app();
-        let state = AppState::from_env();
+        let state = AppState::from_env().await;
         let host = "www.google.com";
         let full_host = format!("https://{}", host);
         let file_path: &'static str = "/images/hpp/ic_wahlberg_product_core_48.png8.png";
@@ -71,7 +71,7 @@ mod tests {
     #[tokio::test]
     async fn test_response_error() {
         let app = app();
-        let state = AppState::from_env();
+        let state = AppState::from_env().await;
         let file_path = "/images/you-must-not-exist.png";
         let response = app
             .with_state(state.clone())
