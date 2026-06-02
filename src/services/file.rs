@@ -3,8 +3,8 @@ use reqwest::StatusCode;
 use tracing::error;
 
 use crate::{
-    env::state::AppState,
-    utils::{fetch::fetch_remote, url::get_host_from_url},
+    env::{app::OriginMode, state::AppState},
+    utils::{fetch::fetch_remote, path::object_key, url::get_host_from_url},
 };
 
 pub async fn process_file_request(
@@ -13,11 +13,8 @@ pub async fn process_file_request(
     path: &str,
 ) -> Result<Response, StatusCode> {
     let target_host = host.unwrap_or(state.host.clone());
-    let key = format!(
-        "files/{}/{}",
-        get_host_from_url(&target_host),
-        path.trim_start_matches('/')
-    );
+    let include_host = state.origin_mode == OriginMode::Remote;
+    let key = object_key("files", &get_host_from_url(&target_host), path, include_host);
 
     match state.storage.exists(&key).await {
         Ok(true) => {
@@ -29,6 +26,12 @@ pub async fn process_file_request(
         }
         Ok(false) => {}
         Err(err) => return Err(map_storage_err(err, &key)),
+    }
+
+    // In bucket-origin mode the storage backend is the source of truth, so a
+    // miss is a 404 rather than an upstream fetch.
+    if state.origin_mode == OriginMode::Bucket {
+        return Err(StatusCode::NOT_FOUND);
     }
 
     let bytes = match fetch_remote(&target_host, path).await {

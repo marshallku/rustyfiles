@@ -6,6 +6,18 @@ pub enum StorageBackend {
     S3,
 }
 
+/// Where original files come from on a storage miss.
+///
+/// - `Remote`: fetch the original from the upstream `HOST` over HTTP and cache
+///   it in storage (read-through cache; the current default).
+/// - `Bucket`: storage is the source of truth — originals are expected to be
+///   uploaded out-of-band, so a miss yields 404 instead of an upstream fetch.
+#[derive(Clone, Debug, PartialEq)]
+pub enum OriginMode {
+    Remote,
+    Bucket,
+}
+
 #[derive(Clone, Debug)]
 pub struct S3Env {
     pub endpoint: Option<String>,
@@ -23,6 +35,7 @@ pub struct Env {
     pub host: Cow<'static, str>,
     pub allowed_hosts: Vec<String>,
     pub storage_backend: StorageBackend,
+    pub origin_mode: OriginMode,
     pub s3: Option<S3Env>,
 }
 
@@ -63,6 +76,20 @@ impl Env {
             ),
         };
 
+        let origin_mode = match std::env::var("ORIGIN_MODE")
+            .ok()
+            .map(|v| v.trim().to_lowercase())
+            .filter(|v| !v.is_empty())
+            .as_deref()
+        {
+            None | Some("remote") => OriginMode::Remote,
+            Some("bucket") => OriginMode::Bucket,
+            Some(other) => panic!(
+                "Invalid ORIGIN_MODE value {:?}. Expected one of: remote, bucket",
+                other
+            ),
+        };
+
         let s3 = if storage_backend == StorageBackend::S3 {
             Some(S3Env {
                 endpoint: std::env::var("S3_ENDPOINT").ok().filter(|s| !s.is_empty()),
@@ -87,6 +114,7 @@ impl Env {
             host,
             allowed_hosts,
             storage_backend,
+            origin_mode,
             s3,
         }
     }

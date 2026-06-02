@@ -1,6 +1,35 @@
 #[cfg(test)]
 mod tests {
-    use crate::utils::path::{get_original_path, get_resize_width_from_path, parse_path};
+    use crate::utils::path::{get_original_path, get_resize_width_from_path, object_key, parse_path};
+
+    #[test]
+    fn test_object_key() {
+        // Remote (read-through cache): host segment disambiguates upstreams.
+        assert_eq!(
+            object_key("images", "example.com", "/photo.png", true),
+            "images/example.com/photo.png"
+        );
+        assert_eq!(
+            object_key("files", "example.com", "doc.pdf", true),
+            "files/example.com/doc.pdf"
+        );
+
+        // Bucket-origin: no upstream, host segment dropped.
+        assert_eq!(
+            object_key("images", "example.com", "/photo.png", false),
+            "images/photo.png"
+        );
+        assert_eq!(
+            object_key("files", "example.com", "doc.pdf", false),
+            "files/doc.pdf"
+        );
+
+        // Leading slash on path is normalized away in both modes.
+        assert_eq!(
+            object_key("images", "h", "///nested/a.png", true),
+            "images/h/nested/a.png"
+        );
+    }
 
     #[test]
     fn test_get_resize_width_from_path() {

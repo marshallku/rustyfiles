@@ -5,12 +5,12 @@ use reqwest::StatusCode;
 use tracing::error;
 
 use crate::{
-    env::state::AppState,
+    env::{app::OriginMode, state::AppState},
     storage::{Storage, StorageError},
     utils::{
         fetch::fetch_remote,
         img::{encode_image, encode_image_to_avif, encode_image_to_webp, guess_image_format, resize_image},
-        path::{get_original_path, get_resize_width_from_path},
+        path::{get_original_path, get_resize_width_from_path, object_key},
         url::get_host_from_url,
     },
 };
@@ -22,7 +22,8 @@ pub async fn process_image_request(
 ) -> Result<Response, StatusCode> {
     let target_host = host.unwrap_or(state.host.clone());
     let pure_host = get_host_from_url(&target_host);
-    let target_key = image_key(&pure_host, path);
+    let include_host = state.origin_mode == OriginMode::Remote;
+    let target_key = object_key("images", &pure_host, path, include_host);
 
     match state.storage.exists(&target_key).await {
         Ok(true) => {
@@ -40,9 +41,16 @@ pub async fn process_image_request(
     let convert_to_webp = path.ends_with(".webp");
     let convert_to_avif = path.ends_with(".avif");
     let original_path = get_original_path(path, resize_width.is_some());
-    let original_key = image_key(&pure_host, &original_path);
+    let original_key = object_key("images", &pure_host, &original_path, include_host);
 
-    let original_bytes = load_or_fetch(state.storage.as_ref(), &original_key, &target_host, &original_path).await?;
+    let original_bytes = load_or_fetch(
+        state.storage.as_ref(),
+        &original_key,
+        &target_host,
+        &original_path,
+        &state.origin_mode,
+    )
+    .await?;
 
     if resize_width.is_none() && !convert_to_webp && !convert_to_avif {
         return state
@@ -93,6 +101,7 @@ async fn load_or_fetch(
     key: &str,
     host: &str,
     path: &str,
+    origin_mode: &OriginMode,
 ) -> Result<Bytes, StatusCode> {
     match storage.exists(key).await {
         Ok(true) => {
@@ -105,16 +114,18 @@ async fn load_or_fetch(
         Err(err) => return Err(map_storage_err(err, key)),
     }
 
+    // In bucket-origin mode the original must already live in storage; a miss
+    // is a 404 rather than an upstream fetch.
+    if *origin_mode == OriginMode::Bucket {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
     let bytes = fetch_remote(host, path).await.map_err(|_| StatusCode::NOT_FOUND)?;
     storage
         .put_bytes(key, bytes.clone())
         .await
         .map_err(|err| map_storage_err(err, key))?;
     Ok(bytes)
-}
-
-fn image_key(host: &str, path: &str) -> String {
-    format!("images/{}/{}", host, path.trim_start_matches('/'))
 }
 
 fn decode_image(bytes: &Bytes) -> Result<DynamicImage, StatusCode> {

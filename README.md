@@ -124,6 +124,26 @@ When `STORAGE_BACKEND=s3`:
 
 Both S3 and R2 use the same protocol — AWS Signature V4 over HTTPS. R2 is drop-in S3-compatible, so only the endpoint and region differ.
 
+### Origin mode
+
+`ORIGIN_MODE` controls where originals come from when they are not already in storage:
+
+-   `remote` (default): on a miss, the original is fetched from `HOST` over HTTP and cached in storage (read-through cache — storage is just a cache, the upstream site is the source of truth).
+-   `bucket`: storage **is** the source of truth. Originals are expected to be uploaded out-of-band, so a miss returns `404` instead of an upstream fetch. Derived images (resize/WebP/AVIF) are still generated on demand and written back to storage.
+
+This is independent of `STORAGE_BACKEND` — `bucket` mode is most useful with `s3`, where originals are uploaded directly to the bucket and Rusty Files reads them, generates derivatives, and stores those derivatives alongside.
+
+#### Object key layout
+
+The request path maps to a storage object key. The host segment is only used in `remote` mode, where it disambiguates objects cached from different upstreams:
+
+| Mode | Key for `GET /images/photo.png` | Key for `GET /files/doc.pdf` |
+| --- | --- | --- |
+| `remote` | `images/<host>/photo.png` | `files/<host>/doc.pdf` |
+| `bucket` | `images/photo.png` | `files/doc.pdf` |
+
+(`<host>` is the request URL's host, or the `HOST` domain when none is given.) In `bucket` mode, upload your originals under `images/<path>` / `files/<path>`. Derived images are keyed the same way with the size/format suffix preserved (e.g. `images/photo.w300.png`), so the original for `images/photo.w300.png.webp` is read from `images/photo.png`.
+
 ## Production Deployment
 
 ### Docker Deployment

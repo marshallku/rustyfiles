@@ -6,7 +6,7 @@ use crate::{
     storage::{local::LocalStorage, s3::S3Storage, SharedStorage},
 };
 
-use super::app::{Env, StorageBackend};
+use super::app::{Env, OriginMode, StorageBackend};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -14,6 +14,7 @@ pub struct AppState {
     pub port: u16,
     pub address: String,
     pub allowed_hosts: Vec<String>,
+    pub origin_mode: OriginMode,
     pub storage: SharedStorage,
 }
 
@@ -47,6 +48,7 @@ impl AppState {
             port: env.port,
             address: env.address.into_owned(),
             allowed_hosts: env.allowed_hosts,
+            origin_mode: env.origin_mode,
             storage,
         }
     }

@@ -27,6 +27,22 @@ pub fn get_original_path(path: &str, has_resize: bool) -> String {
     format!("{}{}", dir, parts.join("."))
 }
 
+/// Builds the storage object key for a request.
+///
+/// `include_host` controls the namespace: in read-through cache mode the host
+/// segment disambiguates objects fetched from different upstreams
+/// (`<prefix>/<host>/<path>`); in bucket-origin mode there is no upstream, so
+/// the host is dropped and the key is simply `<prefix>/<path>`.
+pub fn object_key(prefix: &str, host: &str, path: &str, include_host: bool) -> String {
+    let path = path.trim_start_matches('/');
+
+    if include_host {
+        format!("{}/{}/{}", prefix, host, path)
+    } else {
+        format!("{}/{}", prefix, path)
+    }
+}
+
 pub fn parse_path(full_path: &str) -> (Option<String>, String) {
     if full_path.contains("://") {
         // has protocol
