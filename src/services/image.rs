@@ -7,9 +7,13 @@ use tracing::error;
 use crate::{
     env::{app::OriginMode, state::AppState},
     storage::{Storage, StorageError},
+    env::app::ImageLimits,
     utils::{
         fetch::fetch_remote,
-        img::{encode_image, encode_image_to_avif, encode_image_to_webp, guess_image_format, resize_image},
+        img::{
+            decode_image_with_limits, encode_image, encode_image_to_avif, encode_image_to_webp,
+            guess_image_format, resize_image,
+        },
         path::{get_original_path, get_resize_width_from_path, object_key},
         url::get_host_from_url,
     },
@@ -64,16 +68,16 @@ pub async fn process_image_request(
             .map_err(|err| map_storage_err(err, &target_key));
     }
 
-    let image = decode_image(&original_bytes)?;
+    let image = decode_image(&original_bytes, state.image_limits)?;
 
     let (intermediate_bytes, intermediate_image) = if convert_to_avif {
         let bytes =
             Bytes::from(encode_image_to_avif(&image, Some(80.0)).map_err(internal_error)?);
-        let decoded = decode_image(&bytes)?;
+        let decoded = decode_image(&bytes, state.image_limits)?;
         (bytes, decoded)
     } else if convert_to_webp {
         let bytes = Bytes::from(encode_image_to_webp(&image).map_err(internal_error)?);
-        let decoded = decode_image(&bytes)?;
+        let decoded = decode_image(&bytes, state.image_limits)?;
         (bytes, decoded)
     } else {
         (original_bytes.clone(), image)
@@ -135,8 +139,8 @@ async fn load_or_fetch(
     Ok(bytes)
 }
 
-fn decode_image(bytes: &Bytes) -> Result<DynamicImage, StatusCode> {
-    image::load_from_memory(bytes).map_err(|err| {
+fn decode_image(bytes: &Bytes, limits: ImageLimits) -> Result<DynamicImage, StatusCode> {
+    decode_image_with_limits(bytes, limits.max_width, limits.max_height).map_err(|err| {
         error!("Failed to decode image: {}", err);
         StatusCode::INTERNAL_SERVER_ERROR
     })

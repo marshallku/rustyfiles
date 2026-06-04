@@ -8,7 +8,10 @@ mod tests {
     use reqwest::StatusCode;
 
     use crate::{
-        env::{app::OriginMode, state::AppState},
+        env::{
+            app::{ImageLimits, OriginMode},
+            state::AppState,
+        },
         services::{file::process_file_request, image::process_image_request},
         storage::{Storage, StorageError},
     };
@@ -45,6 +48,7 @@ mod tests {
             allowed_hosts: Vec::new(),
             origin_mode: OriginMode::Bucket,
             storage: Arc::new(EmptyStorage),
+            image_limits: ImageLimits::default(),
         }
     }
 

@@ -107,6 +107,9 @@ Environment variables for customization:
 -   `PORT`: Server port (default: `41890`)
 -   `HOST`: Default origin host (default: `http://localhost/`)
 -   `ALLOWED_HOSTS`: Comma-separated list of allowed hosts for whitelisting (e.g., `example.com,cdn.example.org`). If empty or not set, all hosts are allowed
+-   `IMAGE_MAX_WIDTH` / `IMAGE_MAX_HEIGHT`: Optional caps on the dimensions of a decoded image, guarding against decompression bombs (a tiny encoded file that expands to an enormous bitmap). Unset or `0` means no limit (the default). When set, an image whose decoded width/height would exceed the cap is rejected instead of decoded.
+
+> **Security note:** upstream hosts supplied in the request URL (multi-host mode) are resolved and refused if they point at a private/internal address (loopback, RFC1918, link-local incl. the cloud metadata endpoint, etc.). The operator-configured `HOST` is exempt, so a private/local default origin keeps working.
 
 ### Storage backends
 

@@ -18,6 +18,15 @@ pub enum OriginMode {
     Bucket,
 }
 
+/// Optional caps on the dimensions of a decoded image (decompression-bomb
+/// guard). `None` means unlimited for that axis — the default, which preserves
+/// the previous behavior.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ImageLimits {
+    pub max_width: Option<u32>,
+    pub max_height: Option<u32>,
+}
+
 #[derive(Clone, Debug)]
 pub struct S3Env {
     pub endpoint: Option<String>,
@@ -37,6 +46,7 @@ pub struct Env {
     pub storage_backend: StorageBackend,
     pub origin_mode: OriginMode,
     pub s3: Option<S3Env>,
+    pub image_limits: ImageLimits,
 }
 
 impl Env {
@@ -108,6 +118,11 @@ impl Env {
             None
         };
 
+        let image_limits = ImageLimits {
+            max_width: optional_dimension("IMAGE_MAX_WIDTH"),
+            max_height: optional_dimension("IMAGE_MAX_HEIGHT"),
+        };
+
         Self {
             address,
             port,
@@ -116,6 +131,16 @@ impl Env {
             storage_backend,
             origin_mode,
             s3,
+            image_limits,
         }
     }
+}
+
+/// Reads an optional positive dimension from the environment. An unset,
+/// unparseable, or zero value means "no limit" (`None`).
+fn optional_dimension(key: &str) -> Option<u32> {
+    std::env::var(key)
+        .ok()
+        .and_then(|value| value.trim().parse::<u32>().ok())
+        .filter(|&value| value > 0)
 }

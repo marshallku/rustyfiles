@@ -1,7 +1,29 @@
-use image::{codecs::jpeg::JpegEncoder, DynamicImage, ImageFormat};
+use image::{codecs::jpeg::JpegEncoder, DynamicImage, ImageFormat, ImageReader, Limits};
 use ravif::{Encoder as AvifEncoder, Img};
 use std::io::Cursor;
 use webp::Encoder;
+
+/// Decodes an image, optionally rejecting ones whose dimensions exceed the
+/// configured limits. This guards against decompression bombs (a small encoded
+/// file that expands to an enormous bitmap). With both limits `None` the
+/// behavior matches `image::load_from_memory` (the default 512 MiB allocation
+/// cap still applies); a configured width/height adds a hard dimension cap.
+pub fn decode_image_with_limits(
+    bytes: &[u8],
+    max_width: Option<u32>,
+    max_height: Option<u32>,
+) -> Result<DynamicImage, String> {
+    let mut reader = ImageReader::new(Cursor::new(bytes))
+        .with_guessed_format()
+        .map_err(|err| err.to_string())?;
+
+    let mut limits = Limits::default();
+    limits.max_image_width = max_width;
+    limits.max_image_height = max_height;
+    reader.limits(limits);
+
+    reader.decode().map_err(|err| err.to_string())
+}
 
 pub fn encode_image_to_webp(image: &DynamicImage) -> Result<Vec<u8>, String> {
     let encoder = Encoder::from_image(image).map_err(|e| e.to_string())?;

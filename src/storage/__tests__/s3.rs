@@ -12,7 +12,7 @@ mod tests {
 
     use crate::{
         env::{
-            app::{Env, OriginMode, StorageBackend},
+            app::{Env, ImageLimits, OriginMode, StorageBackend},
             state::AppState,
         },
         services::image::process_image_request,
@@ -174,6 +174,7 @@ mod tests {
             allowed_hosts: Vec::new(),
             origin_mode: OriginMode::Bucket,
             storage: Arc::new(S3Storage::new(load_config()).await),
+            image_limits: ImageLimits::default(),
         };
 
         // Request the resized variant; the derivative does not exist yet.

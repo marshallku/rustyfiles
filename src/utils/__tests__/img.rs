@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
     use crate::utils::img::{
-        encode_image, encode_image_to_avif, encode_image_to_webp, guess_image_format, resize_image,
+        decode_image_with_limits, encode_image, encode_image_to_avif, encode_image_to_webp,
+        guess_image_format, resize_image,
     };
 
     use image::{DynamicImage, ImageFormat, RgbImage};
@@ -69,6 +70,37 @@ mod tests {
         let image = DynamicImage::ImageRgb8(RgbImage::new(80, 80));
         let bytes = encode_image(&image, ImageFormat::Jpeg).expect("encode jpeg");
         assert!(!bytes.is_empty());
+    }
+
+    #[test]
+    fn test_decode_image_without_limits() {
+        let image = DynamicImage::ImageRgb8(RgbImage::new(200, 150));
+        let bytes = encode_image(&image, ImageFormat::Png).expect("encode png");
+
+        let decoded = decode_image_with_limits(&bytes, None, None).expect("decode within no limits");
+        assert_eq!(decoded.width(), 200);
+        assert_eq!(decoded.height(), 150);
+    }
+
+    #[test]
+    fn test_decode_image_within_limits() {
+        let image = DynamicImage::ImageRgb8(RgbImage::new(200, 150));
+        let bytes = encode_image(&image, ImageFormat::Png).expect("encode png");
+
+        let decoded = decode_image_with_limits(&bytes, Some(300), Some(300))
+            .expect("decode within configured limits");
+        assert_eq!(decoded.width(), 200);
+    }
+
+    #[test]
+    fn test_decode_image_rejects_oversized() {
+        let image = DynamicImage::ImageRgb8(RgbImage::new(200, 150));
+        let bytes = encode_image(&image, ImageFormat::Png).expect("encode png");
+
+        // Width exceeds the cap -> decode must be refused (decompression-bomb guard).
+        assert!(decode_image_with_limits(&bytes, Some(100), None).is_err());
+        // Height exceeds the cap.
+        assert!(decode_image_with_limits(&bytes, None, Some(100)).is_err());
     }
 
     #[test]
