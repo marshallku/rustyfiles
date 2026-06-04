@@ -20,6 +20,9 @@ pub async fn process_image_request(
     host: Option<String>,
     path: &str,
 ) -> Result<Response, StatusCode> {
+    // A host parsed from the request URL is attacker-controlled and must go
+    // through the SSRF guard; the operator-configured default is trusted.
+    let untrusted_host = host.is_some();
     let target_host = host.unwrap_or(state.host.clone());
     let pure_host = get_host_from_url(&target_host);
     let include_host = state.origin_mode == OriginMode::Remote;
@@ -49,6 +52,7 @@ pub async fn process_image_request(
         &target_host,
         &original_path,
         &state.origin_mode,
+        untrusted_host,
     )
     .await?;
 
@@ -102,6 +106,7 @@ async fn load_or_fetch(
     host: &str,
     path: &str,
     origin_mode: &OriginMode,
+    untrusted_host: bool,
 ) -> Result<Bytes, StatusCode> {
     match storage.exists(key).await {
         Ok(true) => {
@@ -120,7 +125,9 @@ async fn load_or_fetch(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    let bytes = fetch_remote(host, path).await.map_err(|_| StatusCode::NOT_FOUND)?;
+    let bytes = fetch_remote(host, path, untrusted_host)
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?;
     storage
         .put_bytes(key, bytes.clone())
         .await

@@ -12,6 +12,9 @@ pub async fn process_file_request(
     host: Option<String>,
     path: &str,
 ) -> Result<Response, StatusCode> {
+    // A host parsed from the request URL is attacker-controlled and must go
+    // through the SSRF guard; the operator-configured default is trusted.
+    let untrusted_host = host.is_some();
     let target_host = host.unwrap_or(state.host.clone());
     let include_host = state.origin_mode == OriginMode::Remote;
     let key = object_key("files", &get_host_from_url(&target_host), path, include_host);
@@ -34,7 +37,7 @@ pub async fn process_file_request(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    let bytes = match fetch_remote(&target_host, path).await {
+    let bytes = match fetch_remote(&target_host, path, untrusted_host).await {
         Ok(bytes) => bytes,
         Err(_) => return Err(StatusCode::NOT_FOUND),
     };
