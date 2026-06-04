@@ -1,5 +1,5 @@
 use axum::{
-    http::{HeaderMap, StatusCode},
+    http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
 };
 
@@ -11,7 +11,9 @@ pub fn get_cache_header(age: u32) -> HeaderMap {
         format!("public, max-age={}", age)
     };
 
-    headers.insert("Cache-Control", cache_age.parse().unwrap());
+    let value = HeaderValue::from_str(&cache_age)
+        .unwrap_or_else(|_| HeaderValue::from_static("no-cache"));
+    headers.insert("Cache-Control", value);
 
     headers
 }

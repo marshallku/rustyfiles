@@ -99,6 +99,15 @@ mod tests {
     }
 
     #[test]
+    fn test_get_original_path_short_filename_does_not_panic() {
+        // has_resize=true with a filename that has fewer than two parts must
+        // not underflow `parts.len() - 2`.
+        assert_eq!(get_original_path("w100", true), "w100");
+        assert_eq!(get_original_path("/a", true), "/a");
+        assert_eq!(get_original_path("dir/file", true), "dir/file");
+    }
+
+    #[test]
     fn test_parse_path() {
         assert_eq!(
             parse_path("https://example.com/images/w100/path/to/image.jpg"),

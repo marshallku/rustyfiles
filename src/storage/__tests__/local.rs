@@ -20,6 +20,11 @@ mod tests {
         assert!(storage.exists(key).await.unwrap());
         assert_eq!(&storage.get_bytes(key).await.unwrap()[..], b"hello");
         assert!(dir.path().join("files/example.com/docs/a.txt").exists());
+
+        // serve builds response headers (Content-Type from the path) without
+        // panicking and returns 200.
+        let response = storage.serve(key).await.expect("serve should succeed");
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
 
     /// A leading slash is normalized away rather than treated as an absolute

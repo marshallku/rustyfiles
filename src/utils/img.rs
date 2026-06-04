@@ -56,13 +56,13 @@ pub fn resize_image(image: DynamicImage, width: u32) -> DynamicImage {
     let mut resized = image.thumbnail(width, resize_height);
 
     let blur_threshold = std::env::var("RESIZED_IMAGE_BLUR_THRESHOLD")
-        .unwrap_or("10".to_string())
-        .parse::<u32>()
-        .unwrap();
+        .ok()
+        .and_then(|value| value.parse::<u32>().ok())
+        .unwrap_or(10);
     let blur_sigma = std::env::var("RESIZED_IMAGE_BLUR_SIGMA")
-        .unwrap_or("1.5".to_string())
-        .parse::<f32>()
-        .unwrap();
+        .ok()
+        .and_then(|value| value.parse::<f32>().ok())
+        .unwrap_or(1.5);
 
     if width < blur_threshold {
         resized = resized.fast_blur(blur_sigma);

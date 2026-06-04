@@ -20,7 +20,7 @@ pub fn get_original_path(path: &str, has_resize: bool) -> String {
         parts.pop();
     }
 
-    if has_resize {
+    if has_resize && parts.len() >= 2 {
         parts.remove(parts.len() - 2);
     }
 

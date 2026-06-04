@@ -10,6 +10,7 @@ use aws_sdk_s3::{
 };
 use axum::{
     body::Body,
+    http::HeaderValue,
     response::{IntoResponse, Response},
 };
 use bytes::Bytes;
@@ -140,7 +141,11 @@ impl Storage for S3Storage {
         let body = Body::from_stream(stream);
 
         let mut headers = get_cache_header(YEAR_TO_SECONDS);
-        headers.insert("Content-Type", content_type.parse().unwrap());
+        // `content_type` is upstream/S3-controlled, so it may not be a valid
+        // header value — fall back instead of panicking.
+        let content_type = HeaderValue::from_str(&content_type)
+            .unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream"));
+        headers.insert("Content-Type", content_type);
 
         Ok((headers, body).into_response())
     }

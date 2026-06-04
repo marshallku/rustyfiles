@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use axum::{
     body::Body,
+    http::HeaderValue,
     response::{IntoResponse, Response},
 };
 use bytes::Bytes;
@@ -76,8 +77,10 @@ impl Storage for LocalStorage {
         let body = Body::from_stream(stream);
 
         let mut headers = get_cache_header(YEAR_TO_SECONDS);
-        let mime_type = mime_guess::from_path(&path).first_or_octet_stream();
-        headers.insert("Content-Type", mime_type.to_string().parse().unwrap());
+        let mime_type = mime_guess::from_path(&path).first_or_octet_stream().to_string();
+        let content_type = HeaderValue::from_str(&mime_type)
+            .unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream"));
+        headers.insert("Content-Type", content_type);
 
         Ok((headers, body).into_response())
     }
