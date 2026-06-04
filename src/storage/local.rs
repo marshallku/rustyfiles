@@ -4,7 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use bytes::Bytes;
-use std::path::PathBuf;
+use std::path::{Component, PathBuf};
 use tokio::{fs, io::AsyncReadExt};
 use tokio_util::io::ReaderStream;
 
@@ -23,19 +23,37 @@ impl LocalStorage {
         Self { root: root.into() }
     }
 
-    fn resolve(&self, key: &str) -> PathBuf {
-        self.root.join(key.trim_start_matches('/'))
+    /// Maps a storage key to a path under `root`, rejecting any key that would
+    /// escape the cache root. `PathBuf::join` does not normalize `..`, so a key
+    /// like `files/h/../../../etc/passwd` would otherwise resolve outside
+    /// `root` (path traversal — arbitrary file read, and arbitrary write via
+    /// `put_bytes`). Only `Normal` components are accepted; `..`, an absolute
+    /// root, or a drive prefix yields `NotFound` (no information leak).
+    fn resolve(&self, key: &str) -> Result<PathBuf, StorageError> {
+        let mut path = self.root.clone();
+
+        for component in std::path::Path::new(key.trim_start_matches('/')).components() {
+            match component {
+                Component::Normal(part) => path.push(part),
+                Component::CurDir => {}
+                Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                    return Err(StorageError::NotFound);
+                }
+            }
+        }
+
+        Ok(path)
     }
 }
 
 #[async_trait]
 impl Storage for LocalStorage {
     async fn exists(&self, key: &str) -> Result<bool, StorageError> {
-        fs::try_exists(self.resolve(key)).await.map_err(to_other)
+        fs::try_exists(self.resolve(key)?).await.map_err(to_other)
     }
 
     async fn get_bytes(&self, key: &str) -> Result<Bytes, StorageError> {
-        let path = self.resolve(key);
+        let path = self.resolve(key)?;
         let mut file = fs::File::open(&path).await.map_err(map_io)?;
         let mut buf = Vec::new();
         file.read_to_end(&mut buf).await.map_err(to_other)?;
@@ -43,7 +61,7 @@ impl Storage for LocalStorage {
     }
 
     async fn put_bytes(&self, key: &str, bytes: Bytes) -> Result<(), StorageError> {
-        let path = self.resolve(key);
+        let path = self.resolve(key)?;
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).await.map_err(to_other)?;
         }
@@ -52,7 +70,7 @@ impl Storage for LocalStorage {
     }
 
     async fn serve(&self, key: &str) -> Result<Response, StorageError> {
-        let path = self.resolve(key);
+        let path = self.resolve(key)?;
         let file = fs::File::open(&path).await.map_err(map_io)?;
         let stream = ReaderStream::new(file);
         let body = Body::from_stream(stream);
