@@ -5,6 +5,7 @@ mod tests {
     use crate::utils::fetch::{fetch_remote, is_blocked_ip};
 
     #[tokio::test]
+    #[ignore = "hits a live external host; run with `cargo test -- --ignored`"]
     async fn should_fetch_file() {
         let host = "https://marshallku.com";
         let path = "/favicon.ico";
@@ -16,6 +17,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "hits a live external host; run with `cargo test -- --ignored`"]
     async fn should_error_on_missing_file() {
         let host = "https://marshallku.com";
         let path = "/must-be-404.ico";

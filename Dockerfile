@@ -1,4 +1,4 @@
-FROM rust:1.84-alpine AS base
+FROM rust:1.95-alpine AS base
 
 WORKDIR /usr/src/rustyfiles
 
